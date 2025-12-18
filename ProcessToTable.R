@@ -1,61 +1,72 @@
 library(readr)
 library(networkD3)
-DonationRecord <- read_csv("Test/2025.csv")
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+#Select Source File
+
+#Process Contribution Data into DataFrame
+DonationRecord <- read_csv("ALL.csv")
 DonationRecord$Amount <- parse_number(DonationRecord$Amount)
+DonationRecord$`Contributor Name` <- iconv(DonationRecord$`Contributor Name`,"latin1","UTF-8",sub = "")
+DonationRecord$`Recipient Name` <- iconv(DonationRecord$`Recipient Name`,"latin1","UTF-8",sub = "")
+DonationRecord <- DonationRecord[which(DonationRecord$`Recipient Name` != "CWA-COPE PCC"),]
 DonationRecord$ContributorID <- NA
 DonationRecord$RecipientID <- NA
 
-DonationRecord <-DonationRecord[which(DonationRecord$Amount >5000),]
 
+#Limit for Donation Size
+DonationRecord <-DonationRecord[which(DonationRecord$Amount >=10000),]
+
+
+#Creates a Table of USer ID's and Donation Amounnts by ID
 User_C <- unique(DonationRecord$`Contributor Name`)
 User_R <- unique(DonationRecord$`Recipient Name`)
-
 User <- unique(c(User_C,User_R))
+UserLookup <- data.frame(UserID = c(1:(length(User))), UserName = User, size = 0)
+for( i in 1:length(UserLookup$UserID)){
+  UserLookup$size[i] <- sum( DonationRecord$Amount[ which(DonationRecord$ContributorID == UserLookup$UserID[i] | DonationRecord$RecipientID == UserLookup$UserID[i])])
+}
 
-UserLookup <- data.frame(UserID = c(1:length(User)), UserName = User, size = 0)
-
+#Assigns User ID's to transaction Table
 for(i in 1:length(DonationRecord$Amount)){
   DonationRecord$ContributorID[i] <- UserLookup$UserID[which(UserLookup$UserName == DonationRecord$`Contributor Name`[i])]
   DonationRecord$RecipientID[i] <- UserLookup$UserID[which(UserLookup$UserName == DonationRecord$`Recipient Name`[i])]
 }
 
+#Transaction Between Users simplifed into Matrix to Avoid dupliate transactions
 IncidenceMatrix <- matrix(0, nrow = length(UserLookup$UserID), ncol = length(UserLookup$UserID))
-
 for(i in 1:length(DonationRecord$ContributorID)){
-  print(i)
   IncidenceMatrix[DonationRecord$ContributorID[i],DonationRecord$RecipientID[i]]  <- IncidenceMatrix[DonationRecord$ContributorID[i],DonationRecord$RecipientID[i]] + DonationRecord$Amount[i]
 }
-for( i in 1:length(UserLookup$UserID)){
-  UserLookup$size[i] <- sum( DonationRecord$Amount[ which(DonationRecord$ContributorID == UserLookup$UserID[i] | DonationRecord$RecipientID == UserLookup$UserID[i])])
-}
-
-
 rownames(IncidenceMatrix) <- UserLookup$UserName
 colnames(IncidenceMatrix) <- UserLookup$UserName
 
+
+
+#Converts Incidence Maatrix for networkD3
 links <- IncidenceMatrix %>% 
   as.data.frame() %>% 
   rownames_to_column(var="source") %>% 
   gather(key="target", value="value", -1) %>%
   filter(value != 0)
 
-# From these flows we need to create a node data frame: it lists every entities involved in the flow
 nodes <- data.frame(
   name=c(as.character(links$source), as.character(links$target)) %>% 
     unique()
 )
 
-
-# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
-links$IDsource <- match(links$source, nodes$name)-1 
+links$IDsource <- match(links$source, nodes$name)-1
 links$IDtarget <- match(links$target, nodes$name)-1
+
 
 
 
 #simpleNetwork(links[,c(1:2)], zoom = TRUE)
 
-MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = log10(UserLookup$size))
-MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget,value = log10(links$value))
+MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = sqrt(UserLookup$size))
+MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget ,value = log(links$value))
 forceNetwork(Links = MisLinks, Nodes = MisNodes, Source = "source",
              Target = "target", Value = "value", NodeID = "name",
-             Group = "group", Nodesize = "size", opacity = 0.8,arrows = TRUE, zoom = TRUE)
+             Group = "group", Nodesize = "size", fontSize = 15,opacity = 0.6,arrows = TRUE, zoom = TRUE, opacityNoHover = 0.6)
+
