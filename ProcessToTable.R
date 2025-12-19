@@ -6,7 +6,7 @@ library(tidyverse)
 #Select Source File
 
 #Process Contribution Data into DataFrame
-DonationRecord <- read_csv("ALL.csv")
+DonationRecord <- read_csv("2025.csv")
 DonationRecord$Amount <- parse_number(DonationRecord$Amount)
 DonationRecord$`Contributor Name` <- iconv(DonationRecord$`Contributor Name`,"latin1","UTF-8",sub = "")
 DonationRecord$`Recipient Name` <- iconv(DonationRecord$`Recipient Name`,"latin1","UTF-8",sub = "")
@@ -16,7 +16,7 @@ DonationRecord$RecipientID <- NA
 
 
 #Limit for Donation Size
-DonationRecord <-DonationRecord[which(DonationRecord$Amount >=10000),]
+DonationRecord <-DonationRecord[which(DonationRecord$Amount >=5000),]
 
 
 #Creates a Table of USer ID's and Donation Amounnts by ID
@@ -24,9 +24,7 @@ User_C <- unique(DonationRecord$`Contributor Name`)
 User_R <- unique(DonationRecord$`Recipient Name`)
 User <- unique(c(User_C,User_R))
 UserLookup <- data.frame(UserID = c(1:(length(User))), UserName = User, size = 0)
-for( i in 1:length(UserLookup$UserID)){
-  UserLookup$size[i] <- sum( DonationRecord$Amount[ which(DonationRecord$ContributorID == UserLookup$UserID[i] | DonationRecord$RecipientID == UserLookup$UserID[i])])
-}
+
 
 #Assigns User ID's to transaction Table
 for(i in 1:length(DonationRecord$Amount)){
@@ -38,6 +36,10 @@ for(i in 1:length(DonationRecord$Amount)){
 IncidenceMatrix <- matrix(0, nrow = length(UserLookup$UserID), ncol = length(UserLookup$UserID))
 for(i in 1:length(DonationRecord$ContributorID)){
   IncidenceMatrix[DonationRecord$ContributorID[i],DonationRecord$RecipientID[i]]  <- IncidenceMatrix[DonationRecord$ContributorID[i],DonationRecord$RecipientID[i]] + DonationRecord$Amount[i]
+}
+
+for( i in 1:length(UserLookup$UserID)){
+  UserLookup$size[i] <- sum( DonationRecord$Amount[ which(DonationRecord$ContributorID == UserLookup$UserID[i] | DonationRecord$RecipientID == UserLookup$UserID[i])])
 }
 rownames(IncidenceMatrix) <- UserLookup$UserName
 colnames(IncidenceMatrix) <- UserLookup$UserName
@@ -62,11 +64,10 @@ links$IDtarget <- match(links$target, nodes$name)-1
 
 
 
-#simpleNetwork(links[,c(1:2)], zoom = TRUE)
+simpleNetwork(links[,c(1:2)], zoom = TRUE)
 
 MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = sqrt(UserLookup$size))
 MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget ,value = log(links$value))
 forceNetwork(Links = MisLinks, Nodes = MisNodes, Source = "source",
              Target = "target", Value = "value", NodeID = "name",
              Group = "group", Nodesize = "size", fontSize = 15,opacity = 0.6,arrows = TRUE, zoom = TRUE, opacityNoHover = 0.6)
-
