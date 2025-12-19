@@ -64,8 +64,6 @@ links$IDtarget <- match(links$target, nodes$name)-1
 
 
 
-simpleNetwork(links[,c(1:2)], zoom = TRUE)
-
 MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = sqrt(UserLookup$size))
 MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget ,value = log(links$value))
 
@@ -175,4 +173,5 @@ for(i in 1:length(Process$V1)){
 forceNetwork(Links = MisLinks, Nodes = MisNodes, Source = "source",
              Target = "target", Value = "value", NodeID = "name",
              Group = "group", Nodesize = "size",  charge = -100, fontSize = 15,opacity = 0.6,arrows = TRUE, zoom = TRUE, opacityNoHover = 0.6)
+
 
