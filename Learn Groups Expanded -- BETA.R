@@ -64,7 +64,6 @@ links$IDtarget <- match(links$target, nodes$name)-1
 
 
 
-simpleNetwork(links[,c(1:2)], zoom = TRUE)
 
 MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = sqrt(UserLookup$size))
 MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget ,value = log(links$value))
@@ -209,7 +208,10 @@ Count <- 1
 Row <- 1
 Mean <- mean(HOLD[which(HOLD !=0)]) 
 while(REM == TRUE){
- GROUPING <- which(ResultsMatrix[,Count] >Mean & ResultsMatrix[,Count]-1 %in% Eligable )-1
+  if(sum(ResultsMatrix[which(ResultsMatrix >Mean)])==0){
+    REM <- FALSE
+  }
+ GROUPING <- which(ResultsMatrix[,Count] > Mean & ResultsMatrix[,Count]-1 %in% Eligable )-1
  if(length(GROUPING > 0)){
    Eligable <- setdiff(Eligable,GROUPING-1)
    Groupings$Group[Row] <- Row
@@ -219,9 +221,7 @@ while(REM == TRUE){
    ResultsMatrix[(GROUPING+1),] <- 0
  }
   else{Count <- Count +1}
-  if(sum(ResultsMatrix)==0){
-    REM <- FALSE
-  }
+
 }
 print(Eligable)
 
@@ -236,3 +236,12 @@ forceNetwork(Links = MisLinks, Nodes = MisNodes, Source = "source",
              Target = "target", Value = "value", NodeID = "name",
              Group = "group", Nodesize = "size",  charge = -200, fontSize = 15,opacity = 0.6,arrows = TRUE, zoom = TRUE, opacityNoHover = 0.6)
 
+
+for( i in 1:length(Groupings$Members)){
+  for( j in Eligable){
+    if(j %in% Groupings$Members[[i]]){
+      print(i)
+    }
+  }
+  
+}
