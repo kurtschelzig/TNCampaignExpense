@@ -68,8 +68,8 @@ links$IDtarget <- match(links$target, nodes$name)-1
 MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = sqrt(UserLookup$size))
 MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget ,value = log(links$value))
 
-
-
+Hold <-  matrix(data = 0, nrow = length(MisNodes$name), ncol = length(MisNodes$name))
+for(a in 1:100){
 ########################
   # Number of Searching Nodes, If Searches is Higher the Searching Algo will included more groups, If it is smaller it will include less Groups
 Searches <- 5
@@ -153,7 +153,7 @@ for(i in 1:length(Process$V1)){
 }
 for( i in Drops){
   if(length(Process$Holds[[which(Process$V1 == i)]]) == 0){
-    print(paste("ERR",i))
+    #print(paste("ERR",i))
   targets <- MisLinks$target[ which((MisLinks$source == Process$Starts[[which(Process$V1 == i)]]))]
   sources <- MisLinks$source[ which((MisLinks$target == Process$Starts[[which(Process$V1 == i)]]) )]
   Process$Holds[[which(Process$V1 == i)]]<- c( Process$Holds[[which(Process$V1 == i)]] ,targets,sources)
@@ -190,10 +190,10 @@ for(i in 1:length(Process$Group)){
     }
   }
 }
-print(max(ResultsMatrix))
+#print(max(ResultsMatrix))
 Hold <- Hold + ResultsMatrix
 print(max(Hold))
-
+}
 
 
 ResultsMatrix <- Hold
