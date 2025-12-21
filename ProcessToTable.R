@@ -11,6 +11,7 @@ DonationRecord$Amount <- parse_number(DonationRecord$Amount)
 DonationRecord$`Contributor Name` <- iconv(DonationRecord$`Contributor Name`,"latin1","UTF-8",sub = "")
 DonationRecord$`Recipient Name` <- iconv(DonationRecord$`Recipient Name`,"latin1","UTF-8",sub = "")
 DonationRecord <- DonationRecord[which(DonationRecord$`Recipient Name` != "CWA-COPE PCC"),]
+DonationRecord <- DonationRecord[which(DonationRecord$`Contributor Name` != DonationRecord$`Recipient Name`),]
 DonationRecord$ContributorID <- NA
 DonationRecord$RecipientID <- NA
 
@@ -23,7 +24,7 @@ DonationRecord <-DonationRecord[which(DonationRecord$Amount >=5000),]
 User_C <- unique(DonationRecord$`Contributor Name`)
 User_R <- unique(DonationRecord$`Recipient Name`)
 User <- unique(c(User_C,User_R))
-UserLookup <- data.frame(UserID = c(1:(length(User))), UserName = User, size = 0)
+UserLookup <- data.frame(UserID = c(0:(length(User)-1)), UserName = User, size = 0)
 
 
 #Assigns User ID's to transaction Table
@@ -67,7 +68,7 @@ links$IDtarget <- match(links$target, nodes$name)-1
 simpleNetwork(links[,c(1:2)], zoom = TRUE)
 
 MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = sqrt(UserLookup$size))
-MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget ,value = log(links$value))
+MisLinks  <- data.frame(source = DonationRecord$Con, target = DonationRecord$RecipientID ,value = log(DonationRecord$Amount))
 forceNetwork(Links = MisLinks, Nodes = MisNodes, Source = "source",
              Target = "target", Value = "value", NodeID = "name",
              Group = "group", Nodesize = "size", fontSize = 15,opacity = 0.6,arrows = TRUE, zoom = TRUE, opacityNoHover = 0.6)
