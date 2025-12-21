@@ -6,11 +6,12 @@ library(tidyverse)
 #Select Source File
 
 #Process Contribution Data into DataFrame
-DonationRecord <- read_csv("2025.csv")
+DonationRecord <- read_csv("2024.csv")
 DonationRecord$Amount <- parse_number(DonationRecord$Amount)
 DonationRecord$`Contributor Name` <- iconv(DonationRecord$`Contributor Name`,"latin1","UTF-8",sub = "")
 DonationRecord$`Recipient Name` <- iconv(DonationRecord$`Recipient Name`,"latin1","UTF-8",sub = "")
 DonationRecord <- DonationRecord[which(DonationRecord$`Recipient Name` != "CWA-COPE PCC"),]
+DonationRecord <- DonationRecord[which(DonationRecord$`Contributor Name` != DonationRecord$`Recipient Name`),]
 DonationRecord$ContributorID <- NA
 DonationRecord$RecipientID <- NA
 
@@ -23,7 +24,7 @@ DonationRecord <-DonationRecord[which(DonationRecord$Amount >=5000),]
 User_C <- unique(DonationRecord$`Contributor Name`)
 User_R <- unique(DonationRecord$`Recipient Name`)
 User <- unique(c(User_C,User_R))
-UserLookup <- data.frame(UserID = c(1:(length(User))), UserName = User, size = 0)
+UserLookup <- data.frame(UserID = c(0:(length(User)-1)), UserName = User, size = 0)
 
 
 #Assigns User ID's to transaction Table
@@ -46,26 +47,13 @@ colnames(IncidenceMatrix) <- UserLookup$UserName
 
 
 
-#Converts Incidence Maatrix for networkD3
-links <- IncidenceMatrix %>% 
-  as.data.frame() %>% 
-  rownames_to_column(var="source") %>% 
-  gather(key="target", value="value", -1) %>%
-  filter(value != 0)
-
-nodes <- data.frame(
-  name=c(as.character(links$source), as.character(links$target)) %>% 
-    unique()
-)
-
-links$IDsource <- match(links$source, nodes$name)-1
-links$IDtarget <- match(links$target, nodes$name)-1
-
-
-
 
 MisNodes <- data.frame(name = UserLookup$UserName, group = 1,size = sqrt(UserLookup$size))
-MisLinks  <- data.frame(source = links$IDsource, target = links$IDtarget ,value = log(links$value))
+MisLinks  <- data.frame(source = DonationRecord$ContributorID, target = DonationRecord$RecipientID ,value = log(DonationRecord$Amount))
+
+
+################################################################################
+################################################################################
 
 Searches <- 8
 Starts <- sample(0:(length(MisNodes$name)-1), Searches, replace = TRUE)
@@ -99,9 +87,9 @@ for(i in 1:length(Starts)){
   if(length(Eligable) == 0){
     break();
   }
-  LinkAdress <- which(((links$IDsource %in% Process$Holds[[i]][Process$Holds[[i]] %in% Eligable]) |(links$IDtarget %in% Process$Holds[[i]][Process$Holds[[i]] %in% Eligable])  ))
+  LinkAdress <- which(((MisLinks$source %in% Process$Holds[[i]][Process$Holds[[i]] %in% Eligable]) |(MisLinks$target %in% Process$Holds[[i]][Process$Holds[[i]] %in% Eligable])  ))
   MinDistance <- LinkAdress[which.min(1/links$value[LinkAdress])]
-  option <- c(links$IDsource[MinDistance],links$IDtarget[MinDistance])
+  option <- c(MisLinks$source[MinDistance],MisLinks$target[MinDistance])
   
   selection <- option[option %in% Eligable]
   
@@ -145,9 +133,9 @@ for(i in 1:length(Process$V1)){
     }
 }
 for( i in Drops){
-  LinkAdress <- which(((links$IDsource %in% Process$Holds[[which(Process$V1 == i)]]) |(links$IDtarget %in% Process$Holds[[which(Process$V1 == i)]]  )))
-  MinDistance <- LinkAdress[which.min(1/links$value[LinkAdress])]
-  option <- c(links$IDsource[MinDistance],links$IDtarget[MinDistance])
+  LinkAdress <- which(((MisLinks$source %in% Process$Holds[[which(Process$V1 == i)]]) |(MisLinks$target %in% Process$Holds[[which(Process$V1 == i)]]  )))
+  MinDistance <- LinkAdress[which.min(1/MisLinks$value[LinkAdress])]
+  option <- c(MisLinks$source[MinDistance],MisLinks$target[MinDistance])
   selection <- option[which(option %in% Process$Holds[[which(Process$V1 == i)]])]
   
   for(j in 1:length(Process$V1)){
@@ -173,5 +161,4 @@ for(i in 1:length(Process$V1)){
 forceNetwork(Links = MisLinks, Nodes = MisNodes, Source = "source",
              Target = "target", Value = "value", NodeID = "name",
              Group = "group", Nodesize = "size",  charge = -100, fontSize = 15,opacity = 0.6,arrows = TRUE, zoom = TRUE, opacityNoHover = 0.6)
-
 
